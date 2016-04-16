@@ -23,6 +23,7 @@ static void *const kKVOContext = (void *const)&kKVOContext;
     UIImageView *_centerImageView;
 
     NSTimer *_timer;
+    BOOL _enableTimer;
 
     NSInteger _indexes[3];
     void (^_pageControlConfiguration)(NSUInteger currentPage);
@@ -109,6 +110,10 @@ static void *const kKVOContext = (void *const)&kKVOContext;
 
         self.contentOffset = (CGPoint){ .x = scrollViewWidth };
 
+        if (!_imageViewConfiguration) {
+            return;
+        }
+
         if (contentOffsetX <= 0) {
 
             _indexes[LXPositionRight] = _indexes[LXPositionCenter];
@@ -148,10 +153,14 @@ static void *const kKVOContext = (void *const)&kKVOContext;
 {
     switch (panGR.state) {
         case UIGestureRecognizerStateBegan:
-            [self invalidateTimer];
+            if (_enableTimer) {
+                [self _invalidateTimer];
+            }
             break;
         case UIGestureRecognizerStateEnded:
-            [self startTimer];
+            if (_enableTimer) {
+                [self _startTimer];
+            }
             break;
         default:
             break;
@@ -161,6 +170,13 @@ static void *const kKVOContext = (void *const)&kKVOContext;
 #pragma mark - 定时器处理
 
 - (void)startTimer
+{
+    _enableTimer = YES;
+
+    [self _startTimer];
+}
+
+- (void)_startTimer
 {
     [_timer invalidate];
 
@@ -175,7 +191,15 @@ static void *const kKVOContext = (void *const)&kKVOContext;
 
 - (void)invalidateTimer
 {
+    _enableTimer = NO;
+
+    [self _invalidateTimer];
+}
+
+- (void)_invalidateTimer
+{
     [_timer invalidate];
+
     _timer = nil;
 }
 
@@ -188,7 +212,7 @@ static void *const kKVOContext = (void *const)&kKVOContext;
 {
     [super willMoveToSuperview:newSuperview];
 
-    newSuperview ?: [self invalidateTimer];
+    newSuperview ?: [self _invalidateTimer];
 }
 
 #pragma mark - 配置内容
@@ -231,6 +255,10 @@ static void *const kKVOContext = (void *const)&kKVOContext;
         @throw [NSException exceptionWithName:NSInternalInconsistencyException
                                        reason:@"numberOfPages必须大于0"
                                      userInfo:nil];
+    }
+
+    if (self.contentSize.width == self.bounds.size.width * 3) {
+        self.contentOffset = CGPointZero;
     }
 }
 

@@ -20,9 +20,9 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (void)invalidateTimer;
 
-- (void)configureImageViewAtIndex:(void (^)(UIImageView *imageView, NSUInteger index))configuration;
-
 - (void)configurePageControlForCurrentPage:(void (^)(NSUInteger currentPage))configuration;
+
+- (void)configureImageViewAtIndex:(void (^)(UIImageView *imageView, NSUInteger index))configuration;
 
 @end
 
