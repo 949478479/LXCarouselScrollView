@@ -8,11 +8,25 @@
 
 #import "LXScrollView.h"
 
+typedef NS_ENUM(NSUInteger, LXPosition) {
+    LXPositionLeft,
+    LXPositionCenter,
+    LXPositionRight,
+};
+
+static void *const kKVOContext = (void *const)&kKVOContext;
+
 @interface LXScrollView ()
 {
     UIImageView *_leftImageView;
     UIImageView *_rightImageView;
     UIImageView *_centerImageView;
+
+    NSTimer *_timer;
+
+    NSInteger _indexes[3];
+    void (^_pageControlConfiguration)(NSUInteger currentPage);
+    void (^_imageViewConfiguration)(UIImageView *imageView, NSUInteger index);
 }
 @end
 
@@ -20,9 +34,7 @@
 
 - (void)dealloc
 {
-    [self removeObserver:self
-              forKeyPath:@"contentOffset"
-                 context:(__bridge void *)self];
+    [self removeObserver:self forKeyPath:@"contentOffset" context:kKVOContext];
 }
 
 #pragma mark - 初始化
@@ -52,6 +64,9 @@
     self.showsVerticalScrollIndicator = NO;
     self.showsHorizontalScrollIndicator = NO;
 
+    [self.panGestureRecognizer addTarget:self action:@selector(panGestureRecognizerAction:)];
+    [self addObserver:self forKeyPath:@"contentOffset" options:kNilOptions context:kKVOContext];
+
     UIImageView * __strong *imageViews[] = { &_leftImageView, &_centerImageView, &_rightImageView };
     for (int i = 0; i < 3; ++i) {
         UIImageView *imageView = [UIImageView new];
@@ -73,21 +88,16 @@
                                                  metrics:nil
                                                    views:views]];
     }
-
-    [self addObserver:self
-           forKeyPath:@"contentOffset"
-              options:kNilOptions
-              context:(__bridge void *)self];
 }
 
-#pragma mark - 滚动监听
+#pragma mark - 循环滚动处理
 
 - (void)observeValueForKeyPath:(NSString *)keyPath
                       ofObject:(id)object
                         change:(NSDictionary *)change
                        context:(void *)context
 {
-    if (context != (__bridge void *)self) {
+    if (context != kKVOContext) {
         [super observeValueForKeyPath:keyPath ofObject:object change:change context:context];
         return;
     }
@@ -96,47 +106,137 @@
     CGFloat scrollViewWidth = self.bounds.size.width;
 
     if (contentOffsetX <= 0 || contentOffsetX >= 2 * scrollViewWidth) {
-        if (contentOffsetX <= 0) {
-            _rightImageView.tag = _centerImageView.tag;
-            _rightImageView.image = _centerImageView.image;
 
-            _centerImageView.tag = _leftImageView.tag;
-            _centerImageView.image = _leftImageView.image;
-
-            if (--_leftImageView.tag < 0) {
-                _leftImageView.tag = _images.count - 1;
-            }
-            _leftImageView.image = _images[_leftImageView.tag];
-        } else {
-            _leftImageView.tag = _centerImageView.tag;
-            _leftImageView.image = _centerImageView.image;
-
-            _centerImageView.tag = _rightImageView.tag;
-            _centerImageView.image = _rightImageView.image;
-
-            if (++_rightImageView.tag > _images.count - 1) {
-                _rightImageView.tag = 0;
-            }
-            _rightImageView.image = _images[_rightImageView.tag];
-        }
         self.contentOffset = (CGPoint){ .x = scrollViewWidth };
+
+        if (contentOffsetX <= 0) {
+
+            _indexes[LXPositionRight] = _indexes[LXPositionCenter];
+            _imageViewConfiguration(_rightImageView, _indexes[LXPositionRight]);
+
+            _indexes[LXPositionCenter] = _indexes[LXPositionLeft];
+            _imageViewConfiguration(_centerImageView, _indexes[LXPositionCenter]);
+
+            if (--_indexes[LXPositionLeft] < 0) {
+                _indexes[LXPositionLeft] = _numberOfPages - 1;
+            }
+            _imageViewConfiguration(_leftImageView, _indexes[LXPositionLeft]);
+
+            !_pageControlConfiguration ?: _pageControlConfiguration(_indexes[LXPositionCenter]);
+
+        } else {
+
+            _indexes[LXPositionLeft] = _indexes[LXPositionCenter];
+            _imageViewConfiguration(_leftImageView, _indexes[LXPositionLeft]);
+
+            _indexes[LXPositionCenter] = _indexes[LXPositionRight];
+            _imageViewConfiguration(_centerImageView, _indexes[LXPositionCenter]);
+
+            if (++_indexes[LXPositionRight] > _numberOfPages - 1) {
+                _indexes[LXPositionRight] = 0;
+            }
+            _imageViewConfiguration(_rightImageView, _indexes[LXPositionRight]);
+
+            !_pageControlConfiguration ?: _pageControlConfiguration(_indexes[LXPositionCenter]);
+        }
     }
 }
 
-#pragma mark -
+#pragma mark - 拖拽手势处理
 
-- (void)setImages:(NSArray<UIImage *> *)images
+- (void)panGestureRecognizerAction:(UIPanGestureRecognizer *)panGR
 {
-    _images = images.copy;
+    switch (panGR.state) {
+        case UIGestureRecognizerStateBegan:
+            [self invalidateTimer];
+            break;
+        case UIGestureRecognizerStateEnded:
+            [self startTimer];
+            break;
+        default:
+            break;
+    }
+}
 
-    _leftImageView.tag = 0;
-    _leftImageView.image = _images[0];
+#pragma mark - 定时器处理
 
-    _centerImageView.tag = 1;
-    _centerImageView.image = _images[1];
+- (void)startTimer
+{
+    [_timer invalidate];
 
-    _rightImageView.tag = 2;
-    _rightImageView.image = _images[2];
+    _timer = [NSTimer timerWithTimeInterval:_timeInterval
+                                     target:self
+                                   selector:@selector(timerFire)
+                                   userInfo:nil
+                                    repeats:YES];
+
+    [[NSRunLoop currentRunLoop] addTimer:_timer forMode:NSRunLoopCommonModes];
+}
+
+- (void)invalidateTimer
+{
+    [_timer invalidate];
+    _timer = nil;
+}
+
+- (void)timerFire
+{
+    [self setContentOffset:(CGPoint){ .x = self.bounds.size.width * 2 } animated:YES];
+}
+
+- (void)willMoveToSuperview:(UIView *)newSuperview
+{
+    [super willMoveToSuperview:newSuperview];
+
+    newSuperview ?: [self invalidateTimer];
+}
+
+#pragma mark - 配置内容
+
+- (void)configureImageViewAtIndex:(void (^)(UIImageView * _Nonnull, NSUInteger))configuration
+{
+    _imageViewConfiguration = configuration;
+
+    if (_numberOfPages >= 3) {
+
+        self.scrollEnabled = YES;
+
+        _indexes[LXPositionLeft] = 0;
+        _imageViewConfiguration(_leftImageView, _indexes[LXPositionLeft]);
+
+        _indexes[LXPositionCenter] = 1;
+        _imageViewConfiguration(_centerImageView, _indexes[LXPositionCenter]);
+
+        _indexes[LXPositionRight] = 2;
+        _imageViewConfiguration(_rightImageView, _indexes[LXPositionRight]);
+
+    } else if (_numberOfPages == 2) {
+
+        self.scrollEnabled = YES;
+
+        _indexes[LXPositionLeft] = 0;
+        _imageViewConfiguration(_leftImageView, _indexes[LXPositionLeft]);
+
+        _indexes[LXPositionCenter] = 1;
+        _imageViewConfiguration(_centerImageView, _indexes[LXPositionCenter]);
+
+    } else if (_numberOfPages == 1) {
+
+        self.scrollEnabled = NO;
+
+        _indexes[LXPositionLeft] = 0;
+        _imageViewConfiguration(_leftImageView, _indexes[LXPositionLeft]);
+
+    } else {
+        @throw [NSException exceptionWithName:NSInternalInconsistencyException
+                                       reason:@"numberOfPages必须大于0"
+                                     userInfo:nil];
+    }
+}
+
+- (void)configurePageControlForCurrentPage:(void (^)(NSUInteger))configuration
+{
+    _pageControlConfiguration = configuration;
 }
 
 @end

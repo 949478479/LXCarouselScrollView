@@ -8,8 +8,22 @@
 
 @import UIKit;
 
+NS_ASSUME_NONNULL_BEGIN
+
 @interface LXScrollView : UIScrollView
 
-@property (nullable, nonatomic, copy) NSArray<UIImage *> *images;
+@property (nonatomic) NSUInteger numberOfPages;
+
+@property (nonatomic) NSTimeInterval timeInterval;
+
+- (void)startTimer;
+
+- (void)invalidateTimer;
+
+- (void)configureImageViewAtIndex:(void (^)(UIImageView *imageView, NSUInteger index))configuration;
+
+- (void)configurePageControlForCurrentPage:(void (^)(NSUInteger currentPage))configuration;
 
 @end
+
+NS_ASSUME_NONNULL_END

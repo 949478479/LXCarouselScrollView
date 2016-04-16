@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="10116" systemVersion="15E65" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" initialViewController="BYZ-38-t0r">
     <dependencies>
-        <deployment identifier="iOS"/>
         <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="10085"/>
         <capability name="Aspect ratio constraints" minToolsVersion="5.1"/>
     </dependencies>
@@ -24,15 +23,23 @@
                                     <constraint firstAttribute="width" secondItem="Hko-t1-0BG" secondAttribute="height" multiplier="240:140" id="Ftb-sg-6CX"/>
                                 </constraints>
                             </scrollView>
+                            <pageControl opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" numberOfPages="3" translatesAutoresizingMaskIntoConstraints="NO" id="oAC-d1-D09">
+                                <rect key="frame" x="141" y="150" width="39" height="37"/>
+                                <color key="pageIndicatorTintColor" red="0.0" green="0.47843137250000001" blue="1" alpha="1" colorSpace="calibratedRGB"/>
+                                <color key="currentPageIndicatorTintColor" red="0.94117647059999998" green="0.29411764709999999" blue="0.14117647059999999" alpha="1" colorSpace="calibratedRGB"/>
+                            </pageControl>
                         </subviews>
                         <color key="backgroundColor" red="0.94117647059999998" green="0.29411764709999999" blue="0.14117647059999999" alpha="1" colorSpace="calibratedRGB"/>
                         <constraints>
                             <constraint firstItem="Hko-t1-0BG" firstAttribute="leading" secondItem="8bC-Xf-vdC" secondAttribute="leading" id="BeJ-2Y-CI1"/>
+                            <constraint firstItem="oAC-d1-D09" firstAttribute="centerX" secondItem="8bC-Xf-vdC" secondAttribute="centerX" id="JI2-G2-xG0"/>
                             <constraint firstItem="Hko-t1-0BG" firstAttribute="top" secondItem="y3c-jy-aDJ" secondAttribute="bottom" id="Ymt-o6-ieU"/>
+                            <constraint firstItem="oAC-d1-D09" firstAttribute="bottom" secondItem="Hko-t1-0BG" secondAttribute="bottom" constant="-20" id="ac2-Vb-oW3"/>
                             <constraint firstAttribute="trailing" secondItem="Hko-t1-0BG" secondAttribute="trailing" id="zs4-cV-hQF"/>
                         </constraints>
                     </view>
                     <connections>
+                        <outlet property="pageControl" destination="oAC-d1-D09" id="5h3-g8-ym2"/>
                         <outlet property="scrollView" destination="Hko-t1-0BG" id="v4R-cZ-o8j"/>
                     </connections>
                 </viewController>
