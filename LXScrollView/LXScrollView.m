@@ -28,6 +28,7 @@ static void *const kKVOContext = (void *const)&kKVOContext;
     NSInteger _indexes[3];
     void (^_pageControlConfiguration)(NSUInteger currentPage);
     void (^_imageViewConfiguration)(UIImageView *imageView, NSUInteger index);
+    void (^_imageViewDidTapNotifyBlock)(UIImageView *imageView, NSUInteger index);
 }
 @end
 
@@ -71,9 +72,15 @@ static void *const kKVOContext = (void *const)&kKVOContext;
     UIImageView * __strong *imageViews[] = { &_leftImageView, &_centerImageView, &_rightImageView };
     for (int i = 0; i < 3; ++i) {
         UIImageView *imageView = [UIImageView new];
-        imageView.translatesAutoresizingMaskIntoConstraints = NO;
         [self addSubview:imageView];
         *(imageViews[i]) = imageView;
+
+        imageView.userInteractionEnabled = YES;
+        imageView.translatesAutoresizingMaskIntoConstraints = NO;
+
+        [imageView addGestureRecognizer:
+         [[UITapGestureRecognizer alloc] initWithTarget:self
+                                                 action:@selector(imageViewTapGestureRecognizerAction:)]];
     }
 
     NSDictionary *views =
@@ -88,6 +95,19 @@ static void *const kKVOContext = (void *const)&kKVOContext;
                                                  options:options
                                                  metrics:nil
                                                    views:views]];
+    }
+}
+
+#pragma mark - 点击处理
+
+- (void)imageViewTapGestureRecognizerAction:(UITapGestureRecognizer *)tapGR
+{
+    if (self.contentOffset.x != self.bounds.size.width) {
+        return;
+    }
+    
+    if (_imageViewDidTapNotifyBlock) {
+        _imageViewDidTapNotifyBlock((UIImageView *)tapGR.view, _indexes[LXPositionCenter]);
     }
 }
 
@@ -265,6 +285,11 @@ static void *const kKVOContext = (void *const)&kKVOContext;
 - (void)configurePageControlForCurrentPage:(void (^)(NSUInteger))configuration
 {
     _pageControlConfiguration = configuration;
+}
+
+- (void)notifyWhenImageViewDidTapUsingBlock:(void (^)(UIImageView * _Nonnull, NSUInteger))block
+{
+    _imageViewDidTapNotifyBlock = block;
 }
 
 @end

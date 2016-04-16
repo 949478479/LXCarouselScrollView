@@ -24,6 +24,8 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (void)configureImageViewAtIndex:(void (^)(UIImageView *imageView, NSUInteger index))configuration;
 
+- (void)notifyWhenImageViewDidTapUsingBlock:(void (^)(UIImageView *imageView, NSUInteger index))block;
+
 @end
 
 NS_ASSUME_NONNULL_END

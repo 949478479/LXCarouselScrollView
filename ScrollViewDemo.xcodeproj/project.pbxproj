@@ -7,16 +7,18 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		2D9620791CC384C60015F76F /* LXScrollView.m in Sources */ = {isa = PBXBuildFile; fileRef = 2D9620781CC384C60015F76F /* LXScrollView.m */; };
 		2DBD59071CBE1AE200397708 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 2DBD59061CBE1AE200397708 /* main.m */; };
 		2DBD590A1CBE1AE300397708 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 2DBD59091CBE1AE300397708 /* AppDelegate.m */; };
 		2DBD590D1CBE1AE300397708 /* ViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 2DBD590C1CBE1AE300397708 /* ViewController.m */; };
 		2DBD59101CBE1AE300397708 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 2DBD590E1CBE1AE300397708 /* Main.storyboard */; };
 		2DBD59121CBE1AE300397708 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2DBD59111CBE1AE300397708 /* Assets.xcassets */; };
 		2DBD59151CBE1AE300397708 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 2DBD59131CBE1AE300397708 /* LaunchScreen.storyboard */; };
-		2DBD591E1CBE2CB500397708 /* LXScrollView.m in Sources */ = {isa = PBXBuildFile; fileRef = 2DBD591D1CBE2CB500397708 /* LXScrollView.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		2D9620771CC384C60015F76F /* LXScrollView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LXScrollView.h; sourceTree = "<group>"; };
+		2D9620781CC384C60015F76F /* LXScrollView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LXScrollView.m; sourceTree = "<group>"; };
 		2DBD59021CBE1AE200397708 /* ScrollViewDemo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ScrollViewDemo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		2DBD59061CBE1AE200397708 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
 		2DBD59081CBE1AE200397708 /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
@@ -27,8 +29,6 @@
 		2DBD59111CBE1AE300397708 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		2DBD59141CBE1AE300397708 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		2DBD59161CBE1AE300397708 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		2DBD591C1CBE2CB500397708 /* LXScrollView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LXScrollView.h; sourceTree = "<group>"; };
-		2DBD591D1CBE2CB500397708 /* LXScrollView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LXScrollView.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -42,9 +42,19 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		2D9620761CC384C60015F76F /* LXScrollView */ = {
+			isa = PBXGroup;
+			children = (
+				2D9620771CC384C60015F76F /* LXScrollView.h */,
+				2D9620781CC384C60015F76F /* LXScrollView.m */,
+			);
+			path = LXScrollView;
+			sourceTree = "<group>";
+		};
 		2DBD58F91CBE1AE200397708 = {
 			isa = PBXGroup;
 			children = (
+				2D9620761CC384C60015F76F /* LXScrollView */,
 				2DBD59041CBE1AE200397708 /* ScrollViewDemo */,
 				2DBD59031CBE1AE200397708 /* Products */,
 			);
@@ -65,8 +75,6 @@
 				2DBD59091CBE1AE300397708 /* AppDelegate.m */,
 				2DBD590B1CBE1AE300397708 /* ViewController.h */,
 				2DBD590C1CBE1AE300397708 /* ViewController.m */,
-				2DBD591C1CBE2CB500397708 /* LXScrollView.h */,
-				2DBD591D1CBE2CB500397708 /* LXScrollView.m */,
 				2DBD590E1CBE1AE300397708 /* Main.storyboard */,
 				2DBD59111CBE1AE300397708 /* Assets.xcassets */,
 				2DBD59131CBE1AE300397708 /* LaunchScreen.storyboard */,
@@ -158,7 +166,7 @@
 				2DBD590D1CBE1AE300397708 /* ViewController.m in Sources */,
 				2DBD590A1CBE1AE300397708 /* AppDelegate.m in Sources */,
 				2DBD59071CBE1AE200397708 /* main.m in Sources */,
-				2DBD591E1CBE2CB500397708 /* LXScrollView.m in Sources */,
+				2D9620791CC384C60015F76F /* LXScrollView.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
