@@ -29,10 +29,9 @@
                      [UIImage imageNamed:@"image_3"],
                      [UIImage imageNamed:@"image_4"], ];
 
-    self.scrollView.numberOfPages = 5;
-
     __weak typeof(self) weakSelf = self;
 
+    self.scrollView.numberOfPages = 5;
     [self.scrollView configureImageViewAtIndex:^(UIImageView * _Nonnull imageView, NSUInteger index) {
         imageView.image = weakSelf.images[index];
     }];
