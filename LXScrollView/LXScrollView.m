@@ -3,7 +3,7 @@
 //  ScrollViewDemo
 //
 //  Created by 从今以后 on 16/4/13.
-//  Copyright © 2016年 千行时线. All rights reserved.
+//  Copyright © 2016年 从今以后. All rights reserved.
 //
 
 #import "LXScrollView.h"
@@ -226,6 +226,13 @@ static void *const kKVOContext = (void *const)&kKVOContext;
 - (void)timerFire
 {
     [self setContentOffset:(CGPoint){ .x = self.bounds.size.width * 2 } animated:YES];
+
+    self.userInteractionEnabled = NO;
+    __weak typeof(self) weakSelf = self;
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.3 * NSEC_PER_SEC)),
+                   dispatch_get_main_queue(), ^{
+        weakSelf.userInteractionEnabled = YES;
+    });
 }
 
 - (void)willMoveToSuperview:(UIView *)newSuperview
