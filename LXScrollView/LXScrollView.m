@@ -47,7 +47,7 @@
 
 typedef NS_ENUM(NSUInteger, _LXPosition) {
     _LXPositionLeft,
-    _LXPositionCenter,
+    _LXPositionMiddle,
     _LXPositionRight,
 };
 
@@ -64,7 +64,7 @@ static char kKVOContext;
 
     UIImageView *_leftImageView;
     UIImageView *_rightImageView;
-    UIImageView *_centerImageView;
+    UIImageView *_middleImageView;
 
     _LXMessageInterceptor *_messageInterceptor;
 
@@ -123,7 +123,7 @@ static char kKVOContext;
      [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(_handleTap:)]];
 
     // 添加三个 imageView 作为子视图
-    UIImageView * __strong *imageViews[] = { &_leftImageView, &_centerImageView, &_rightImageView };
+    UIImageView * __strong *imageViews[] = { &_leftImageView, &_middleImageView, &_rightImageView };
     for (int i = 0; i < 3; ++i) {
         UIImageView *imageView = [UIImageView new];
         imageView.translatesAutoresizingMaskIntoConstraints = NO;
@@ -133,10 +133,10 @@ static char kKVOContext;
 
     // 为 imageView 设置约束，等宽等高，相邻排列
     NSDictionary *views =
-    NSDictionaryOfVariableBindings(_leftImageView, _centerImageView, _rightImageView, self);
+    NSDictionaryOfVariableBindings(_leftImageView, _middleImageView, _rightImageView, self);
     NSString *visualFormats[] = {
-        @"V:|[_centerImageView(self)]|",
-        @"H:|[_leftImageView(self)][_centerImageView(self)][_rightImageView(self)]|" };
+        @"V:|[_middleImageView(self)]|",
+        @"H:|[_leftImageView(self)][_middleImageView(self)][_rightImageView(self)]|" };
     NSLayoutFormatOptions options = NSLayoutFormatAlignAllTop | NSLayoutFormatAlignAllBottom;
     for (int i = 0; i < 2; ++i) {
         [self addConstraints:
@@ -287,33 +287,33 @@ static char kKVOContext;
         // 将图片内容左移或右移一个位置
         if (contentOffsetX <= 0) {
 
-            _indexes[_LXPositionRight] = _indexes[_LXPositionCenter];
+            _indexes[_LXPositionRight] = _indexes[_LXPositionMiddle];
             _imageViewConfiguration(_rightImageView, _indexes[_LXPositionRight]);
 
-            _indexes[_LXPositionCenter] = _indexes[_LXPositionLeft];
-            _imageViewConfiguration(_centerImageView, _indexes[_LXPositionCenter]);
+            _indexes[_LXPositionMiddle] = _indexes[_LXPositionLeft];
+            _imageViewConfiguration(_middleImageView, _indexes[_LXPositionMiddle]);
 
             if (--_indexes[_LXPositionLeft] < 0) {
                 _indexes[_LXPositionLeft] = _numberOfPages - 1;
             }
             _imageViewConfiguration(_leftImageView, _indexes[_LXPositionLeft]);
 
-            !_pageControlConfiguration ?: _pageControlConfiguration(_indexes[_LXPositionCenter]);
+            !_pageControlConfiguration ?: _pageControlConfiguration(_indexes[_LXPositionMiddle]);
 
         } else {
 
-            _indexes[_LXPositionLeft] = _indexes[_LXPositionCenter];
+            _indexes[_LXPositionLeft] = _indexes[_LXPositionMiddle];
             _imageViewConfiguration(_leftImageView, _indexes[_LXPositionLeft]);
 
-            _indexes[_LXPositionCenter] = _indexes[_LXPositionRight];
-            _imageViewConfiguration(_centerImageView, _indexes[_LXPositionCenter]);
+            _indexes[_LXPositionMiddle] = _indexes[_LXPositionRight];
+            _imageViewConfiguration(_middleImageView, _indexes[_LXPositionMiddle]);
 
             if (++_indexes[_LXPositionRight] > _numberOfPages - 1) {
                 _indexes[_LXPositionRight] = 0;
             }
             _imageViewConfiguration(_rightImageView, _indexes[_LXPositionRight]);
             
-            !_pageControlConfiguration ?: _pageControlConfiguration(_indexes[_LXPositionCenter]);
+            !_pageControlConfiguration ?: _pageControlConfiguration(_indexes[_LXPositionMiddle]);
         }
     }
 }
@@ -328,7 +328,7 @@ static char kKVOContext;
     }
 
     if (_imageViewDidTapNotifyBlock) {
-        _imageViewDidTapNotifyBlock(_centerImageView, _indexes[_LXPositionCenter]);
+        _imageViewDidTapNotifyBlock(_middleImageView, _indexes[_LXPositionMiddle]);
     }
 }
 
@@ -365,8 +365,8 @@ static char kKVOContext;
         _indexes[_LXPositionLeft] = _numberOfPages - 1;
         _imageViewConfiguration(_leftImageView, _indexes[_LXPositionLeft]);
 
-        _indexes[_LXPositionCenter] = 0;
-        _imageViewConfiguration(_centerImageView, _indexes[_LXPositionCenter]);
+        _indexes[_LXPositionMiddle] = 0;
+        _imageViewConfiguration(_middleImageView, _indexes[_LXPositionMiddle]);
 
         _indexes[_LXPositionRight] = 1;
         _imageViewConfiguration(_rightImageView, _indexes[_LXPositionRight]);
@@ -378,8 +378,8 @@ static char kKVOContext;
         _indexes[_LXPositionLeft] = 1;
         _imageViewConfiguration(_leftImageView, _indexes[_LXPositionLeft]);
 
-        _indexes[_LXPositionCenter] = 0;
-        _imageViewConfiguration(_centerImageView, _indexes[_LXPositionCenter]);
+        _indexes[_LXPositionMiddle] = 0;
+        _imageViewConfiguration(_middleImageView, _indexes[_LXPositionMiddle]);
 
         _indexes[_LXPositionRight] = 1;
         _imageViewConfiguration(_rightImageView, _indexes[_LXPositionRight]);
@@ -388,13 +388,13 @@ static char kKVOContext;
 
         self.scrollEnabled = NO;
 
-        _indexes[_LXPositionCenter] = 0;
+        _indexes[_LXPositionMiddle] = 0;
         _indexes[_LXPositionLeft] = NSNotFound;
         _indexes[_LXPositionRight] = NSNotFound;
 
         _leftImageView.image = nil;
         _rightImageView.image = nil;
-        _imageViewConfiguration(_centerImageView, _indexes[_LXPositionCenter]);
+        _imageViewConfiguration(_middleImageView, _indexes[_LXPositionMiddle]);
 
     } else {
 
@@ -402,14 +402,14 @@ static char kKVOContext;
 
         _leftImageView.image = nil;
         _rightImageView.image = nil;
-        _centerImageView.image = nil;
+        _middleImageView.image = nil;
 
         _indexes[_LXPositionLeft] = NSNotFound;
         _indexes[_LXPositionRight] = NSNotFound;
-        _indexes[_LXPositionCenter] = NSNotFound;
+        _indexes[_LXPositionMiddle] = NSNotFound;
     }
 
-    !_pageControlConfiguration ?: _pageControlConfiguration(_indexes[_LXPositionCenter]);
+    !_pageControlConfiguration ?: _pageControlConfiguration(_indexes[_LXPositionMiddle]);
 
     _isPreparingForReloadData = NO;
 }
@@ -423,6 +423,15 @@ static char kKVOContext;
 }
 
 #pragma mark - 配置内容
+
+- (void)setContentModeOfImageView:(UIViewContentMode)contentModeOfImageView
+{
+    _contentModeOfImageView = contentModeOfImageView;
+
+    _leftImageView.contentMode = contentModeOfImageView;
+    _rightImageView.contentMode = contentModeOfImageView;
+    _middleImageView.contentMode = contentModeOfImageView;
+}
 
 - (void)configureImageViewAtIndex:(void (^)(UIImageView * _Nonnull, NSUInteger))configuration
 {

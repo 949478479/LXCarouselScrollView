@@ -12,10 +12,12 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface LXScrollView : UIScrollView
 
-/// 总页数，默认 0
-@property (nonatomic) IBInspectable NSUInteger numberOfPages;
 /// 定时器时间间隔，默认 2s
 @property (nonatomic) IBInspectable double timeInterval;
+/// 总页数，默认 0
+@property (nonatomic) IBInspectable NSUInteger numberOfPages;
+/// 内容显示模式，默认为 UIViewContentModeScaleToFill
+@property (nonatomic) UIViewContentMode contentModeOfImageView;
 
 /// 若可能处于滚动中，则更新数据前需调用此方法，定时器也会被废止
 - (void)prepareForReloadData;
