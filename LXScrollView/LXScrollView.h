@@ -14,6 +14,8 @@ NS_ASSUME_NONNULL_BEGIN
 
 /// 定时器时间间隔，默认 2s
 @property (nonatomic) IBInspectable double timeInterval;
+/// 禁用点击交互，默认不禁用
+@property (nonatomic) IBInspectable BOOL disableTapAction;
 /// 总页数，默认 0
 @property (nonatomic) IBInspectable NSUInteger numberOfPages;
 /// 内容显示模式，默认为 UIViewContentModeScaleToFill

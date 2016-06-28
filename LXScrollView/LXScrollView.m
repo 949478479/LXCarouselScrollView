@@ -8,43 +8,6 @@
 
 #import "LXScrollView.h"
 
-@interface _LXMessageInterceptor : NSProxy
-@property (nonatomic, weak) id receiver;
-@property (nonatomic, unsafe_unretained) id middleMan;
-@end
-
-@implementation _LXMessageInterceptor
-
-- (instancetype)initWithMiddleMan:(id)middleMan
-{
-    _middleMan = middleMan;
-    return self;
-}
-
-- (id)forwardingTargetForSelector:(SEL)aSelector
-{
-    if ([_middleMan respondsToSelector:aSelector]) {
-        return _middleMan;
-    }
-    if ([_receiver respondsToSelector:aSelector]) {
-        return _receiver;
-    }
-    return nil;
-}
-
-- (BOOL)respondsToSelector:(SEL)aSelector
-{
-    if ([_middleMan respondsToSelector:aSelector]) {
-        return YES;
-    }
-    if ([_receiver respondsToSelector:aSelector]) {
-        return YES;
-    }
-    return NO;
-}
-
-@end
-
 typedef NS_ENUM(NSUInteger, _LXPosition) {
     _LXPositionLeft,
     _LXPositionMiddle,
@@ -53,7 +16,7 @@ typedef NS_ENUM(NSUInteger, _LXPosition) {
 
 static char kKVOContext;
 
-@interface LXScrollView ()
+@interface LXScrollView () <UIScrollViewDelegate>
 {
     NSTimer *_timer;
     BOOL _enableTimer;
@@ -66,7 +29,7 @@ static char kKVOContext;
     UIImageView *_rightImageView;
     UIImageView *_middleImageView;
 
-    _LXMessageInterceptor *_messageInterceptor;
+    UITapGestureRecognizer *_tapGestureRecognizer;
 
     NSInteger _indexes[3];
     void (^_pageControlConfiguration)(NSUInteger currentPage);
@@ -106,21 +69,17 @@ static char kKVOContext;
 {
     _timeInterval = 2;
 
-    // 使其成为自己的代理，拦截部分代理方法
-    _messageInterceptor = [[_LXMessageInterceptor alloc] initWithMiddleMan:self];
-    [super setDelegate:(id<UIScrollViewDelegate>)_messageInterceptor];
-
     self.bounces = NO;
+    self.delegate = self;
     self.pagingEnabled = YES;
     self.showsVerticalScrollIndicator = NO;
     self.showsHorizontalScrollIndicator = NO;
 
-    // 通过监听 contentOffset 来处理滚动
     [self addObserver:self forKeyPath:@"contentOffset" options:kNilOptions context:&kKVOContext];
 
-    // 添加轻击手势
     [self addGestureRecognizer:
-     [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(_handleTap:)]];
+     _tapGestureRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self
+                                                                     action:@selector(_handleTapAction:)]];
 
     // 添加三个 imageView 作为子视图
     UIImageView * __strong *imageViews[] = { &_leftImageView, &_middleImageView, &_rightImageView };
@@ -206,50 +165,31 @@ static char kKVOContext;
     [super willMoveToSuperview:newSuperview];
 }
 
-#pragma mark - 代理方法转发
+#pragma mark - <UIScrollViewDelegate>
 
 - (void)setDelegate:(id<UIScrollViewDelegate>)delegate
 {
-    _messageInterceptor.receiver = delegate;
-}
-
-- (id<UIScrollViewDelegate>)delegate
-{
-    return _messageInterceptor.receiver;
+    [super setDelegate:self];
 }
 
 - (void)scrollViewWillBeginDragging:(UIScrollView *)scrollView
 {
     _isScrolling = YES;
     [self _invalidateTimer];
-
-    if ([self.delegate respondsToSelector:@selector(scrollViewWillBeginDragging:)]) {
-        [self.delegate scrollViewWillBeginDragging:scrollView];
-    }
 }
 
 - (void)scrollViewDidEndDecelerating:(UIScrollView *)scrollView
 {
     _isScrolling = NO;
     [self _startTimer];
-
     [self _reloadDataAfterScrollingIfNeeded];
-    
-    if ([self.delegate respondsToSelector:@selector(scrollViewDidEndDecelerating:)]) {
-        [self.delegate scrollViewDidEndDecelerating:scrollView];
-    }
 }
 
 - (void)scrollViewDidEndScrollingAnimation:(UIScrollView *)scrollView
 {
     _isScrolling = NO;
     self.userInteractionEnabled = YES;
-
     [self _reloadDataAfterScrollingIfNeeded];
-
-    if ([self.delegate respondsToSelector:@selector(scrollViewDidEndScrollingAnimation:)]) {
-        [self.delegate scrollViewDidEndScrollingAnimation:scrollView];
-    }
 }
 
 #pragma mark - 循环滚动处理
@@ -266,7 +206,7 @@ static char kKVOContext;
     CGFloat scrollViewWidth = self.bounds.size.width;
     CGFloat contentSizeWidth = self.contentSize.width;
 
-    // scrollView 及其子视图尚未布局完成
+    // 布局尚未完成
     if (scrollViewWidth == 0 || contentSizeWidth != scrollViewWidth * 3) {
         return;
     }
@@ -320,7 +260,7 @@ static char kKVOContext;
 
 #pragma mark - 图片点击处理
 
-- (void)_handleTap:(UITapGestureRecognizer *)tapGR
+- (void)_handleTapAction:(UITapGestureRecognizer *)tapGR
 {
     // 在中间停稳时才响应点击
     if (self.contentOffset.x != self.bounds.size.width) {
