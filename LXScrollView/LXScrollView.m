@@ -167,11 +167,6 @@ static char kKVOContext;
 
 #pragma mark - <UIScrollViewDelegate>
 
-- (void)setDelegate:(id<UIScrollViewDelegate>)delegate
-{
-    [super setDelegate:self];
-}
-
 - (void)scrollViewWillBeginDragging:(UIScrollView *)scrollView
 {
     _isScrolling = YES;
