@@ -173,9 +173,16 @@ static char kKVOContext;
     [self _invalidateTimer];
 }
 
+- (void)scrollViewWillBeginDecelerating:(UIScrollView *)scrollView
+{
+    self.userInteractionEnabled = NO;
+}
+
 - (void)scrollViewDidEndDecelerating:(UIScrollView *)scrollView
 {
     _isScrolling = NO;
+    self.userInteractionEnabled = YES;
+
     [self _startTimer];
     [self _reloadDataAfterScrollingIfNeeded];
 }
