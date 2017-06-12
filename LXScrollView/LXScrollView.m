@@ -16,7 +16,7 @@ typedef NS_ENUM(NSUInteger, _LXPosition) {
 
 static char kKVOContext;
 
-@interface LXScrollView () <UIScrollViewDelegate>
+@interface LXScrollView () 
 {
     NSTimer *_timer;
     BOOL _enableTimer;
@@ -40,8 +40,7 @@ static char kKVOContext;
 
 @implementation LXScrollView
 
-- (void)dealloc
-{
+- (void)dealloc {
     [self removeObserver:self forKeyPath:@"contentOffset" context:&kKVOContext];
 }
 
@@ -77,9 +76,8 @@ static char kKVOContext;
 
     [self addObserver:self forKeyPath:@"contentOffset" options:kNilOptions context:&kKVOContext];
 
-    [self addGestureRecognizer:
-     _tapGestureRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self
-                                                                     action:@selector(_handleTapAction:)]];
+    UITapGestureRecognizer *tapGR = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(_handleTapAction:)];
+    [self addGestureRecognizer:_tapGestureRecognizer = tapGR];
 
     // 添加三个 imageView 作为子视图
     UIImageView * __strong *imageViews[] = { &_leftImageView, &_middleImageView, &_rightImageView };
@@ -91,22 +89,24 @@ static char kKVOContext;
     }
 
     // 为 imageView 设置约束，等宽等高，相邻排列
-    NSDictionary *views =
-    NSDictionaryOfVariableBindings(_leftImageView, _middleImageView, _rightImageView, self);
+    NSDictionary *views = NSDictionaryOfVariableBindings(_leftImageView, _middleImageView, _rightImageView, self);
     NSString *visualFormats[] = {
         @"V:|[_middleImageView(self)]|",
-        @"H:|[_leftImageView(self)][_middleImageView(self)][_rightImageView(self)]|" };
+        @"H:|[_leftImageView(self)][_middleImageView(self)][_rightImageView(self)]|"
+    };
     NSLayoutFormatOptions options = NSLayoutFormatAlignAllTop | NSLayoutFormatAlignAllBottom;
+    NSMutableArray *constraints = [NSMutableArray new];
     for (int i = 0; i < 2; ++i) {
-        [self addConstraints:
+        [constraints addObjectsFromArray:
          [NSLayoutConstraint constraintsWithVisualFormat:visualFormats[i]
                                                  options:options
                                                  metrics:nil
                                                    views:views]];
     }
+    [NSLayoutConstraint activateConstraints:constraints];
 }
 
-#pragma mark - 定时器处理
+#pragma mark - 定时器
 
 - (void)startTimer
 {
@@ -194,7 +194,7 @@ static char kKVOContext;
     [self _reloadDataAfterScrollingIfNeeded];
 }
 
-#pragma mark - 循环滚动处理
+#pragma mark - 循环滚动
 
 - (void)observeValueForKeyPath:(NSString *)keyPath
                       ofObject:(id)object
