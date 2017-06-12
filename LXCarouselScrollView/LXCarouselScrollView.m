@@ -116,10 +116,10 @@ static char kKVOContext;
 
     _enableTimer = YES;
 
-    [self _startTimer];
+    [self _startTimerIfNeeded];
 }
 
-- (void)_startTimer
+- (void)_startTimerIfNeeded
 {
     if (!_enableTimer) {
         return;
@@ -173,24 +173,30 @@ static char kKVOContext;
     [self _invalidateTimer];
 }
 
-- (void)scrollViewWillBeginDecelerating:(UIScrollView *)scrollView
+- (void)scrollViewDidEndDragging:(UIScrollView *)scrollView willDecelerate:(BOOL)decelerate
 {
-    self.userInteractionEnabled = NO;
+    if (decelerate) {
+        scrollView.userInteractionEnabled = NO;
+    } else {
+        _isScrolling = NO;
+        [self _startTimerIfNeeded];
+        [self _reloadDataAfterScrollingIfNeeded];
+    }
 }
 
 - (void)scrollViewDidEndDecelerating:(UIScrollView *)scrollView
 {
     _isScrolling = NO;
-    self.userInteractionEnabled = YES;
+    scrollView.userInteractionEnabled = YES;
 
-    [self _startTimer];
+    [self _startTimerIfNeeded];
     [self _reloadDataAfterScrollingIfNeeded];
 }
 
 - (void)scrollViewDidEndScrollingAnimation:(UIScrollView *)scrollView
 {
     _isScrolling = NO;
-    self.userInteractionEnabled = YES;
+    scrollView.userInteractionEnabled = YES;
     [self _reloadDataAfterScrollingIfNeeded];
 }
 
