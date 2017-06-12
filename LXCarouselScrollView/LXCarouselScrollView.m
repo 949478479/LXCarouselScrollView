@@ -1,12 +1,12 @@
 //
-//  LXScrollView.m
-//  ScrollViewDemo
+//  LXCarouselScrollView.m
+//  Demo
 //
 //  Created by 从今以后 on 16/4/13.
 //  Copyright © 2016年 从今以后. All rights reserved.
 //
 
-#import "LXScrollView.h"
+#import "LXCarouselScrollView.h"
 
 typedef NS_ENUM(NSUInteger, _LXPosition) {
     _LXPositionLeft,
@@ -16,7 +16,7 @@ typedef NS_ENUM(NSUInteger, _LXPosition) {
 
 static char kKVOContext;
 
-@interface LXScrollView () 
+@interface LXCarouselScrollView () 
 {
     NSTimer *_timer;
     BOOL _enableTimer;
@@ -38,7 +38,7 @@ static char kKVOContext;
 }
 @end
 
-@implementation LXScrollView
+@implementation LXCarouselScrollView
 
 - (void)dealloc {
     [self removeObserver:self forKeyPath:@"contentOffset" context:&kKVOContext];

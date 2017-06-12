@@ -1,6 +1,6 @@
 //
-//  LXScrollView.h
-//  ScrollViewDemo
+//  LXCarouselScrollView.h
+//  Demo
 //
 //  Created by 从今以后 on 16/4/13.
 //  Copyright © 2016年 从今以后. All rights reserved.
@@ -10,7 +10,7 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface LXScrollView : UIScrollView <UIScrollViewDelegate>
+@interface LXCarouselScrollView : UIScrollView <UIScrollViewDelegate>
 
 /// 禁用点击交互，默认 NO。
 @property (nonatomic) IBInspectable BOOL disableTapAction;

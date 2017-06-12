@@ -1,16 +1,16 @@
 //
 //  ViewController.m
-//  ScrollViewDemo
+//  Demo
 //
 //  Created by 从今以后 on 16/4/13.
 //  Copyright © 2016年 从今以后. All rights reserved.
 //
 
 #import "ViewController.h"
-#import "LXScrollView.h"
+#import "LXCarouselScrollView.h"
 
 @interface ViewController ()
-@property (nonatomic) IBOutlet LXScrollView *scrollView;
+@property (nonatomic) IBOutlet LXCarouselScrollView *scrollView;
 @property (nonatomic) IBOutlet UIPageControl *pageControl;
 @property (nonatomic) NSArray *images;
 @end
