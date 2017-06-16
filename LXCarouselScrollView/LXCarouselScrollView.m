@@ -14,16 +14,14 @@ typedef NS_ENUM(NSUInteger, _LXPosition) {
     _LXPositionRight,
 };
 
-static char kKVOContext;
-
 @interface LXCarouselScrollView () 
 {
     NSTimer *_timer;
     BOOL _enableTimer;
 
+    BOOL _isInvalid;
     BOOL _isScrolling;
-    BOOL _isPreparingForReloadData;
-    BOOL _shouldReloadDataAfterScrolling;
+    BOOL _delayReload;
 
     UIImageView *_leftImageView;
     UIImageView *_rightImageView;
@@ -39,10 +37,6 @@ static char kKVOContext;
 @end
 
 @implementation LXCarouselScrollView
-
-- (void)dealloc {
-    [self removeObserver:self forKeyPath:@"contentOffset" context:&kKVOContext];
-}
 
 #pragma mark - 初始化
 
@@ -74,13 +68,11 @@ static char kKVOContext;
     self.showsVerticalScrollIndicator = NO;
     self.showsHorizontalScrollIndicator = NO;
 
-    [self addObserver:self forKeyPath:@"contentOffset" options:kNilOptions context:&kKVOContext];
-
     UITapGestureRecognizer *tapGR = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(_handleTapAction:)];
     [self addGestureRecognizer:_tapGestureRecognizer = tapGR];
 
     // 添加三个 imageView 作为子视图
-    UIImageView * __strong *imageViews[] = { &_leftImageView, &_middleImageView, &_rightImageView };
+    UIImageView *__strong *imageViews[] = { &_leftImageView, &_middleImageView, &_rightImageView };
     for (int i = 0; i < 3; ++i) {
         UIImageView *imageView = [UIImageView new];
         imageView.translatesAutoresizingMaskIntoConstraints = NO;
@@ -106,135 +98,154 @@ static char kKVOContext;
     [NSLayoutConstraint activateConstraints:constraints];
 }
 
-#pragma mark - 定时器
+#pragma mark - 辅助方法
+
+- (BOOL)_isAtMiddlePosition {
+    return self.contentOffset.x == CGRectGetWidth(self.bounds);
+}
+
+- (BOOL)_didCompleteLayout
+{
+    CGFloat contentSizeWidth = self.contentSize.width;
+    CGFloat scrollViewWidth = CGRectGetWidth(self.bounds);
+    return (scrollViewWidth != 0) && (scrollViewWidth * 3 == contentSizeWidth);
+}
+
+#pragma mark - 定时器处理
 
 - (void)startTimer
 {
-    if (_numberOfPages < 2) {
-        return;
+    if (_numberOfPages > 1) {
+        _enableTimer = YES;
+        [self _startTimerIfNeeded];
     }
-
-    _enableTimer = YES;
-
-    [self _startTimerIfNeeded];
 }
 
 - (void)_startTimerIfNeeded
 {
-    if (!_enableTimer) {
-        return;
+    if (_enableTimer) {
+        [_timer invalidate];
+        _timer = [NSTimer timerWithTimeInterval:_timeInterval
+                                         target:self
+                                       selector:@selector(_scrollToNextPageAnimated)
+                                       userInfo:nil
+                                        repeats:YES];
+        [[NSRunLoop currentRunLoop] addTimer:_timer forMode:NSRunLoopCommonModes];
     }
-
-    [_timer invalidate];
-
-    _timer = [NSTimer timerWithTimeInterval:_timeInterval
-                                     target:self
-                                   selector:@selector(_timerFire)
-                                   userInfo:nil
-                                    repeats:YES];
-
-    [[NSRunLoop currentRunLoop] addTimer:_timer forMode:NSRunLoopCommonModes];
 }
 
-- (void)invalidateTimer
+- (void)stopTimer
 {
     _enableTimer = NO;
-
     [self _invalidateTimer];
 }
 
 - (void)_invalidateTimer
 {
     [_timer invalidate];
-
     _timer = nil;
-}
-
-- (void)_timerFire
-{
-    _isScrolling = YES;
-    self.userInteractionEnabled = NO;
-    [self setContentOffset:(CGPoint){ .x = self.bounds.size.width * 2 } animated:YES];
 }
 
 - (void)willMoveToSuperview:(UIView *)newSuperview
 {
     // 从父视图移除前废止定时器，打破引用循环
     newSuperview ?: [self _invalidateTimer];
-
     [super willMoveToSuperview:newSuperview];
+}
+
+#pragma mark - 滚动控制
+
+- (void)_beginScrolling {
+    _isScrolling = YES;
+}
+
+- (void)_endScrolling {
+    _isScrolling = NO;
+}
+
+- (void)_disableInteraction
+{
+    self.userInteractionEnabled = NO;
+    self.panGestureRecognizer.enabled = NO;
+    _tapGestureRecognizer.enabled = NO;
+}
+
+- (void)_enableInteraction
+{
+    self.userInteractionEnabled = YES;
+    self.panGestureRecognizer.enabled = YES;
+    _tapGestureRecognizer.enabled = !self.disableTapAction;
+}
+
+- (void)_scrollToNextPageAnimated
+{
+    if (!self.isTracking) {
+        [self _beginScrolling];
+        [self _disableInteraction];
+        [self setContentOffset:(CGPoint){ .x = CGRectGetWidth(self.bounds) * 2 } animated:YES];
+    }
+}
+
+- (void)_resetContentOffset {
+    self.contentOffset = (CGPoint){ .x = CGRectGetWidth(self.bounds) };
 }
 
 #pragma mark - <UIScrollViewDelegate>
 
 - (void)scrollViewWillBeginDragging:(UIScrollView *)scrollView
 {
-    _isScrolling = YES;
+    [self _beginScrolling];
     [self _invalidateTimer];
 }
 
 - (void)scrollViewDidEndDragging:(UIScrollView *)scrollView willDecelerate:(BOOL)decelerate
 {
     if (decelerate) {
-        scrollView.userInteractionEnabled = NO;
+        [self _disableInteraction];
     } else {
-        _isScrolling = NO;
+        [self _endScrolling];
         [self _startTimerIfNeeded];
-        [self _reloadDataAfterScrollingIfNeeded];
+        [self _reloadAfterScrollingIfNeeded];
     }
 }
 
 - (void)scrollViewDidEndDecelerating:(UIScrollView *)scrollView
 {
-    _isScrolling = NO;
-    scrollView.userInteractionEnabled = YES;
-
+    [self _endScrolling];
+    [self _enableInteraction];
     [self _startTimerIfNeeded];
-    [self _reloadDataAfterScrollingIfNeeded];
+    [self _reloadAfterScrollingIfNeeded];
 }
 
 - (void)scrollViewDidEndScrollingAnimation:(UIScrollView *)scrollView
 {
-    _isScrolling = NO;
-    scrollView.userInteractionEnabled = YES;
-    [self _reloadDataAfterScrollingIfNeeded];
+    [self _endScrolling];
+    [self _enableInteraction];
+    [self _reloadAfterScrollingIfNeeded];
 }
 
-#pragma mark - 循环滚动
-
-- (void)observeValueForKeyPath:(NSString *)keyPath
-                      ofObject:(id)object
-                        change:(NSDictionary *)change
-                       context:(void *)context
+- (void)scrollViewDidScroll:(UIScrollView *)scrollView
 {
-    if (context != &kKVOContext) {
-        return [super observeValueForKeyPath:keyPath ofObject:object change:change context:context];
-    }
-
-    CGFloat scrollViewWidth = self.bounds.size.width;
-    CGFloat contentSizeWidth = self.contentSize.width;
-
-    // 布局尚未完成
-    if (scrollViewWidth == 0 || contentSizeWidth != scrollViewWidth * 3) {
+    if (![self _didCompleteLayout]) {
         return;
     }
 
     CGFloat contentOffsetX = self.contentOffset.x;
+    CGFloat scrollViewWidth = CGRectGetWidth(self.bounds);
 
     // 滚动到左边界或右边界
     if (contentOffsetX <= 0 || contentOffsetX >= 2 * scrollViewWidth) {
+        // 防止无限拖拽
+        [self _disableInteraction];
+        [self _resetContentOffset];
 
-        // 重置回中心位置
-        self.contentOffset = (CGPoint){ .x = scrollViewWidth };
-
-        // 直接返回，否则可能会导致索引越界等问题
-        if (_isPreparingForReloadData || !_imageViewConfiguration) {
+        // 直接返回，因为数据源已经无效，可能会导致索引越界等问题
+        if (_isInvalid || !_imageViewConfiguration) {
             return;
         }
 
         // 将图片内容左移或右移一个位置
         if (contentOffsetX <= 0) {
-
             _indexes[_LXPositionRight] = _indexes[_LXPositionMiddle];
             _imageViewConfiguration(_rightImageView, _indexes[_LXPositionRight]);
 
@@ -247,9 +258,8 @@ static char kKVOContext;
             _imageViewConfiguration(_leftImageView, _indexes[_LXPositionLeft]);
 
             !_pageControlConfiguration ?: _pageControlConfiguration(_indexes[_LXPositionMiddle]);
-
-        } else {
-
+        }
+        else {
             _indexes[_LXPositionLeft] = _indexes[_LXPositionMiddle];
             _imageViewConfiguration(_leftImageView, _indexes[_LXPositionLeft]);
 
@@ -268,13 +278,14 @@ static char kKVOContext;
 
 #pragma mark - 图片点击处理
 
+- (void)setDisableTapAction:(BOOL)disableTapAction
+{
+    _disableTapAction = disableTapAction;
+    _tapGestureRecognizer.enabled = !disableTapAction;
+}
+
 - (void)_handleTapAction:(UITapGestureRecognizer *)tapGR
 {
-    // 在中间停稳时才响应点击
-    if (self.contentOffset.x != self.bounds.size.width) {
-        return;
-    }
-
     if (_imageViewDidTapNotifyBlock) {
         _imageViewDidTapNotifyBlock(_middleImageView, _indexes[_LXPositionMiddle]);
     }
@@ -282,32 +293,30 @@ static char kKVOContext;
 
 #pragma mark - 刷新内容
 
-- (void)prepareForReloadData
+- (void)invalidate
 {
-    [self invalidateTimer];
-
-    _isPreparingForReloadData = YES;
+    _isInvalid = YES;
+    [self _invalidateTimer];
 }
 
 - (void)reloadData
 {
     // 如果处于滚动中，则需滚动结束后再刷新
     if (_isScrolling) {
-        _shouldReloadDataAfterScrolling = YES;
+        _delayReload = YES;
         return;
     }
 
     // 将 scrollView 重置回中间位置
-    CGFloat scrollViewWidth = self.bounds.size.width;
-    if (self.contentSize.width != scrollViewWidth * 3) {
-        [self layoutIfNeeded];
-        self.contentOffset = (CGPoint){ .x = self.bounds.size.width };
+    if ([self _didCompleteLayout]) {
+        [self _resetContentOffset];
     } else {
-        self.contentOffset = (CGPoint){ .x = scrollViewWidth };
+        [self setNeedsLayout];
+        [self layoutIfNeeded];
+        [self _resetContentOffset];
     }
 
     if (_numberOfPages >= 3) {
-
         self.scrollEnabled = YES;
 
         _indexes[_LXPositionLeft] = _numberOfPages - 1;
@@ -318,9 +327,8 @@ static char kKVOContext;
 
         _indexes[_LXPositionRight] = 1;
         _imageViewConfiguration(_rightImageView, _indexes[_LXPositionRight]);
-
-    } else if (_numberOfPages == 2) {
-
+    }
+    else if (_numberOfPages == 2) {
         self.scrollEnabled = YES;
 
         _indexes[_LXPositionLeft] = 1;
@@ -331,21 +339,19 @@ static char kKVOContext;
 
         _indexes[_LXPositionRight] = 1;
         _imageViewConfiguration(_rightImageView, _indexes[_LXPositionRight]);
-
-    } else if (_numberOfPages == 1) {
-
+    }
+    else if (_numberOfPages == 1) {
         self.scrollEnabled = NO;
 
-        _indexes[_LXPositionMiddle] = 0;
         _indexes[_LXPositionLeft] = NSNotFound;
+        _indexes[_LXPositionMiddle] = 0;
         _indexes[_LXPositionRight] = NSNotFound;
 
         _leftImageView.image = nil;
         _rightImageView.image = nil;
         _imageViewConfiguration(_middleImageView, _indexes[_LXPositionMiddle]);
-
-    } else {
-
+    }
+    else {
         self.scrollEnabled = NO;
 
         _leftImageView.image = nil;
@@ -359,27 +365,18 @@ static char kKVOContext;
 
     !_pageControlConfiguration ?: _pageControlConfiguration(_indexes[_LXPositionMiddle]);
 
-    _isPreparingForReloadData = NO;
+    _isInvalid = NO;
 }
 
-- (void)_reloadDataAfterScrollingIfNeeded
+- (void)_reloadAfterScrollingIfNeeded
 {
-    if (_shouldReloadDataAfterScrolling) {
-        _shouldReloadDataAfterScrolling = NO;
+    if (_delayReload) {
+        _delayReload = NO;
         [self reloadData];
     }
 }
 
 #pragma mark - 配置内容
-
-- (void)setContentModeOfImageView:(UIViewContentMode)contentModeOfImageView
-{
-    _contentModeOfImageView = contentModeOfImageView;
-
-    _leftImageView.contentMode = contentModeOfImageView;
-    _rightImageView.contentMode = contentModeOfImageView;
-    _middleImageView.contentMode = contentModeOfImageView;
-}
 
 - (void)configureImageViewAtIndex:(void (^)(UIImageView * _Nonnull, NSUInteger))configuration
 {

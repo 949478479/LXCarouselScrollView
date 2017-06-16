@@ -53,7 +53,7 @@
 
 - (IBAction)changeNumberOfPages:(UISegmentedControl *)sender
 {
-    [self.scrollView prepareForReloadData];
+    [self.scrollView invalidate];
 
     switch (sender.selectedSegmentIndex) {
         case 0:
