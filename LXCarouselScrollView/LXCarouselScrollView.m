@@ -286,8 +286,10 @@ typedef NS_ENUM(NSUInteger, _LXPosition) {
 
 - (void)_handleTapAction:(UITapGestureRecognizer *)tapGR
 {
-    if (_imageViewDidTapNotifyBlock) {
-        _imageViewDidTapNotifyBlock(_middleImageView, _indexes[_LXPositionMiddle]);
+    if (_middleImageView.image) {
+        if (_imageViewDidTapNotifyBlock) {
+            _imageViewDidTapNotifyBlock(_middleImageView, _indexes[_LXPositionMiddle]);
+        }
     }
 }
 
