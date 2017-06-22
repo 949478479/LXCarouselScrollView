@@ -19,7 +19,7 @@ NS_ASSUME_NONNULL_BEGIN
 /// 定时器时间间隔，默认 2s。
 @property (nonatomic) IBInspectable NSTimeInterval timeInterval;
 
-/// 用于配置的 block 不会再调用，直到重新刷新数据；如果开启了定时器，则定时器会被废止。
+/// 更新配置 block 和页数前调用此方法，配置 block 不会再被调用；如果开启了定时器，则定时器会被废止。
 - (void)invalidate;
 
 /// 刷新数据，用于配置的 block 会立即调用。
