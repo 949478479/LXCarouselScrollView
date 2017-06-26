@@ -10,7 +10,7 @@
 
 typedef NS_ENUM(NSUInteger, _LXPosition) {
     _LXPositionLeft,
-    _LXPositionMiddle,
+    _LXPositionCenter,
     _LXPositionRight,
 };
 
@@ -25,14 +25,14 @@ typedef NS_ENUM(NSUInteger, _LXPosition) {
 
     UIImageView *_leftImageView;
     UIImageView *_rightImageView;
-    UIImageView *_middleImageView;
+    UIImageView *_centerImageView;
 
     UITapGestureRecognizer *_tapGestureRecognizer;
 
     NSInteger _indexes[3];
-    void (^_pageControlConfiguration)(NSUInteger currentPage);
-    void (^_imageViewConfiguration)(UIImageView *imageView, NSUInteger index);
-    void (^_imageViewDidTapNotifyBlock)(UIImageView *imageView, NSUInteger index);
+    void (^_pageChangedBlock)(NSInteger currentPage);
+    void (^_imageViewDidTapBlock)(UIImageView *imageView, NSInteger index);
+    void (^_imageViewConfigurationBlock)(UIImageView *imageView, NSInteger index);
 }
 @end
 
@@ -72,19 +72,21 @@ typedef NS_ENUM(NSUInteger, _LXPosition) {
     [self addGestureRecognizer:_tapGestureRecognizer = tapGR];
 
     // 添加三个 imageView 作为子视图
-    UIImageView *__strong *imageViews[] = { &_leftImageView, &_middleImageView, &_rightImageView };
+    UIImageView *__strong *imageViews[] = { &_leftImageView, &_centerImageView, &_rightImageView };
     for (int i = 0; i < 3; ++i) {
         UIImageView *imageView = [UIImageView new];
+		imageView.clipsToBounds = YES;
+		imageView.contentMode = UIViewContentModeScaleAspectFill;
         imageView.translatesAutoresizingMaskIntoConstraints = NO;
         *(imageViews[i]) = imageView;
         [self addSubview:imageView];
     }
 
     // 为 imageView 设置约束，等宽等高，相邻排列
-    NSDictionary *views = NSDictionaryOfVariableBindings(_leftImageView, _middleImageView, _rightImageView, self);
+    NSDictionary *views = NSDictionaryOfVariableBindings(_leftImageView, _centerImageView, _rightImageView, self);
     NSString *visualFormats[] = {
-        @"V:|[_middleImageView(self)]|",
-        @"H:|[_leftImageView(self)][_middleImageView(self)][_rightImageView(self)]|"
+        @"V:|[_centerImageView(self)]|",
+        @"H:|[_leftImageView(self)][_centerImageView(self)][_rightImageView(self)]|"
     };
     NSLayoutFormatOptions options = NSLayoutFormatAlignAllTop | NSLayoutFormatAlignAllBottom;
     NSMutableArray *constraints = [NSMutableArray new];
@@ -100,7 +102,7 @@ typedef NS_ENUM(NSUInteger, _LXPosition) {
 
 #pragma mark - 辅助方法
 
-- (BOOL)_isAtMiddlePosition {
+- (BOOL)_isAtCenterPosition {
     return self.contentOffset.x == CGRectGetWidth(self.bounds);
 }
 
@@ -191,40 +193,40 @@ typedef NS_ENUM(NSUInteger, _LXPosition) {
     }
 }
 
-- (void)_resetContentOffset {
+- (void)_scrollToCenterPosition {
     self.contentOffset = (CGPoint){ .x = CGRectGetWidth(self.bounds) };
 }
 
-- (void)_moveContentRight
+- (void)_moveImageContentToRight
 {
-	_indexes[_LXPositionRight] = _indexes[_LXPositionMiddle];
-	_imageViewConfiguration(_rightImageView, _indexes[_LXPositionRight]);
+	_indexes[_LXPositionRight] = _indexes[_LXPositionCenter];
+	_imageViewConfigurationBlock(_rightImageView, _indexes[_LXPositionRight]);
 
-	_indexes[_LXPositionMiddle] = _indexes[_LXPositionLeft];
-	_imageViewConfiguration(_middleImageView, _indexes[_LXPositionMiddle]);
+	_indexes[_LXPositionCenter] = _indexes[_LXPositionLeft];
+	_imageViewConfigurationBlock(_centerImageView, _indexes[_LXPositionCenter]);
 
 	if (--_indexes[_LXPositionLeft] < 0) {
 		_indexes[_LXPositionLeft] = _numberOfPages - 1;
 	}
-	_imageViewConfiguration(_leftImageView, _indexes[_LXPositionLeft]);
+	_imageViewConfigurationBlock(_leftImageView, _indexes[_LXPositionLeft]);
 
-	!_pageControlConfiguration ?: _pageControlConfiguration(_indexes[_LXPositionMiddle]);
+	!_pageChangedBlock ?: _pageChangedBlock(_indexes[_LXPositionCenter]);
 }
 
-- (void)_moveContentLeft
+- (void)_moveImageContentToLeft
 {
-	_indexes[_LXPositionLeft] = _indexes[_LXPositionMiddle];
-	_imageViewConfiguration(_leftImageView, _indexes[_LXPositionLeft]);
+	_indexes[_LXPositionLeft] = _indexes[_LXPositionCenter];
+	_imageViewConfigurationBlock(_leftImageView, _indexes[_LXPositionLeft]);
 
-	_indexes[_LXPositionMiddle] = _indexes[_LXPositionRight];
-	_imageViewConfiguration(_middleImageView, _indexes[_LXPositionMiddle]);
+	_indexes[_LXPositionCenter] = _indexes[_LXPositionRight];
+	_imageViewConfigurationBlock(_centerImageView, _indexes[_LXPositionCenter]);
 
 	if (++_indexes[_LXPositionRight] > _numberOfPages - 1) {
 		_indexes[_LXPositionRight] = 0;
 	}
-	_imageViewConfiguration(_rightImageView, _indexes[_LXPositionRight]);
+	_imageViewConfigurationBlock(_rightImageView, _indexes[_LXPositionRight]);
 
-	!_pageControlConfiguration ?: _pageControlConfiguration(_indexes[_LXPositionMiddle]);
+	!_pageChangedBlock ?: _pageChangedBlock(_indexes[_LXPositionCenter]);
 }
 
 - (void)_handleScrollViewWillBeginDragging
@@ -237,8 +239,8 @@ typedef NS_ENUM(NSUInteger, _LXPosition) {
 {
 	[self _endScrolling];
 	[self _enableInteraction];
+	[self _reloadDataIfNeeded];
 	[self _startTimerIfNeeded];
-	[self _reloadAfterScrollingIfNeeded];
 }
 
 #pragma mark - <UIScrollViewDelegate>
@@ -251,16 +253,17 @@ typedef NS_ENUM(NSUInteger, _LXPosition) {
 {
     if (decelerate) {
         [self _disableInteraction];
-    } else if ([self _isAtMiddlePosition]) {
-		// 禁用交互性也会触发此方法，因此未必处于中间位置。
+    }
+	// 此为用户拖拽至中间位置松手的情况，禁用交互性也会触发此方法，因此需要判断是否处于中间位置。
+	else if ([self _isAtCenterPosition]) {
         [self _handleScrollViewDidEndScrolling];
     }
 }
 
 - (void)scrollViewDidEndScrollingAnimation:(UIScrollView *)scrollView
 {
-	// 有时候滚动动画还在进行中，视图就从窗口移除了，此时滚动会停止并触发此方法，因此手动设置成终点位置。
-	if (![self _isAtMiddlePosition]) {
+	// 若滚动动画尚未完成时视图就被从窗口移除，滚动会停止并触发此方法，因此手动设置滚动完成后的位置。
+	if (![self _isAtCenterPosition]) {
 		[self _scrollToNextPageAnimated:NO];
 	}
 }
@@ -274,28 +277,28 @@ typedef NS_ENUM(NSUInteger, _LXPosition) {
     CGFloat contentOffsetX = self.contentOffset.x;
     CGFloat scrollViewWidth = CGRectGetWidth(self.bounds);
 
-	// 满足该条件的情况为：1.滚动至两侧边界重置回中心位置；2.拖拽不足半页重置回中心位置。
+	// 满足该条件的情况有两种：1.滚动至两侧边界重置回中心位置；2.拖拽不足半页重置回中心位置。
 	if (contentOffsetX == scrollViewWidth) {
-		// 拖拽至正中间然后松手的情况会在 -scrollViewDidEndDragging:willDecelerate: 方法中处理。
+		// 此处为非用户拖拽的情况，用户拖拽至正中间然后松手的情况会在 -scrollViewDidEndDragging:willDecelerate: 方法中处理。
 		if (!scrollView.isTracking) {
 			[self _handleScrollViewDidEndScrolling];
 		}
 	}
 	// 滚动到左边界或右边界。
 	else if (contentOffsetX <= 0 || contentOffsetX >= 2 * scrollViewWidth) {
-		if (!_isInvalid && _imageViewConfiguration) {
+		if (!_isInvalid && _imageViewConfigurationBlock) {
 			// 将图片内容左移或右移一个位置
 			if (contentOffsetX <= 0) {
-				[self _moveContentRight];
+				[self _moveImageContentToRight];
 			} else {
-				[self _moveContentLeft];
+				[self _moveImageContentToLeft];
 			}
 		}
-		// 防止无限拖拽，这里会直接触发 -scrollViewDidEndDragging:willDecelerate: 方法，且 decelerate 参数为 NO。
+		// 防止多指交替不停地拖拽，这会触发 -scrollViewDidEndDragging:willDecelerate: 方法，且 decelerate 参数为 NO。
 		if (scrollView.isTracking) {
 			[self _disableInteraction];
 		}
-		[self _resetContentOffset];
+		[self _scrollToCenterPosition];
 	}
 }
 
@@ -309,9 +312,9 @@ typedef NS_ENUM(NSUInteger, _LXPosition) {
 
 - (void)_handleTapAction:(UITapGestureRecognizer *)tapGR
 {
-    if (_middleImageView.image && [self _isAtMiddlePosition]) {
-        if (_imageViewDidTapNotifyBlock) {
-            _imageViewDidTapNotifyBlock(_middleImageView, _indexes[_LXPositionMiddle]);
+    if (_centerImageView.image && [self _isAtCenterPosition]) {
+        if (_imageViewDidTapBlock) {
+            _imageViewDidTapBlock(_centerImageView, _indexes[_LXPositionCenter]);
         }
     }
 }
@@ -334,15 +337,15 @@ typedef NS_ENUM(NSUInteger, _LXPosition) {
 
     // 将 scrollView 重置回中间位置
     if ([self _didCompleteLayout]) {
-        [self _resetContentOffset];
+        [self _scrollToCenterPosition];
     } else {
         [self setNeedsLayout];
         [self layoutIfNeeded];
-        [self _resetContentOffset];
+        [self _scrollToCenterPosition];
     }
 
     if (_numberOfPages >= 3) {
-		[self _configureWhenPageCountMoreThanOrEqualThree];
+		[self _configureWhenPageCountMoreThanTwo];
     } else if (_numberOfPages == 2) {
 		[self _configureWhenPageCountEqualTwo];
     } else if (_numberOfPages == 1) {
@@ -351,12 +354,12 @@ typedef NS_ENUM(NSUInteger, _LXPosition) {
 		[self _configureWhenPageCountEqualZero];
     }
 
-    !_pageControlConfiguration ?: _pageControlConfiguration(_indexes[_LXPositionMiddle]);
+    !_pageChangedBlock ?: _pageChangedBlock(_indexes[_LXPositionCenter]);
 
     _isInvalid = NO;
 }
 
-- (void)_reloadAfterScrollingIfNeeded
+- (void)_reloadDataIfNeeded
 {
 	if (_delayReload) {
 		_delayReload = NO;
@@ -364,18 +367,18 @@ typedef NS_ENUM(NSUInteger, _LXPosition) {
 	}
 }
 
-- (void)_configureWhenPageCountMoreThanOrEqualThree
+- (void)_configureWhenPageCountMoreThanTwo
 {
 	self.scrollEnabled = YES;
 
 	_indexes[_LXPositionLeft] = _numberOfPages - 1;
-	_imageViewConfiguration(_leftImageView, _indexes[_LXPositionLeft]);
+	_imageViewConfigurationBlock(_leftImageView, _indexes[_LXPositionLeft]);
 
-	_indexes[_LXPositionMiddle] = 0;
-	_imageViewConfiguration(_middleImageView, _indexes[_LXPositionMiddle]);
+	_indexes[_LXPositionCenter] = 0;
+	_imageViewConfigurationBlock(_centerImageView, _indexes[_LXPositionCenter]);
 
 	_indexes[_LXPositionRight] = 1;
-	_imageViewConfiguration(_rightImageView, _indexes[_LXPositionRight]);
+	_imageViewConfigurationBlock(_rightImageView, _indexes[_LXPositionRight]);
 }
 
 - (void)_configureWhenPageCountEqualTwo
@@ -383,13 +386,13 @@ typedef NS_ENUM(NSUInteger, _LXPosition) {
 	self.scrollEnabled = YES;
 
 	_indexes[_LXPositionLeft] = 1;
-	_imageViewConfiguration(_leftImageView, _indexes[_LXPositionLeft]);
+	_imageViewConfigurationBlock(_leftImageView, _indexes[_LXPositionLeft]);
 
-	_indexes[_LXPositionMiddle] = 0;
-	_imageViewConfiguration(_middleImageView, _indexes[_LXPositionMiddle]);
+	_indexes[_LXPositionCenter] = 0;
+	_imageViewConfigurationBlock(_centerImageView, _indexes[_LXPositionCenter]);
 
 	_indexes[_LXPositionRight] = 1;
-	_imageViewConfiguration(_rightImageView, _indexes[_LXPositionRight]);
+	_imageViewConfigurationBlock(_rightImageView, _indexes[_LXPositionRight]);
 }
 
 - (void)_configureWhenPageCountEqualOne
@@ -397,12 +400,12 @@ typedef NS_ENUM(NSUInteger, _LXPosition) {
 	self.scrollEnabled = NO;
 
 	_indexes[_LXPositionLeft] = NSNotFound;
-	_indexes[_LXPositionMiddle] = 0;
+	_indexes[_LXPositionCenter] = 0;
 	_indexes[_LXPositionRight] = NSNotFound;
 
 	_leftImageView.image = nil;
 	_rightImageView.image = nil;
-	_imageViewConfiguration(_middleImageView, _indexes[_LXPositionMiddle]);
+	_imageViewConfigurationBlock(_centerImageView, _indexes[_LXPositionCenter]);
 }
 
 - (void)_configureWhenPageCountEqualZero
@@ -411,25 +414,25 @@ typedef NS_ENUM(NSUInteger, _LXPosition) {
 
 	_leftImageView.image = nil;
 	_rightImageView.image = nil;
-	_middleImageView.image = nil;
+	_centerImageView.image = nil;
 
 	_indexes[_LXPositionLeft] = NSNotFound;
 	_indexes[_LXPositionRight] = NSNotFound;
-	_indexes[_LXPositionMiddle] = NSNotFound;
+	_indexes[_LXPositionCenter] = NSNotFound;
 }
 
 #pragma mark - 设置 block
 
-- (void)configureImageViewAtIndex:(void (^)(UIImageView * _Nonnull, NSUInteger))configuration {
-    _imageViewConfiguration = configuration;
+- (void)configureImageViewUsingBlock:(void (^)(UIImageView * _Nonnull, NSInteger))block {
+    _imageViewConfigurationBlock = block;
 }
 
-- (void)configurePageControlForCurrentPage:(void (^)(NSUInteger))configuration {
-    _pageControlConfiguration = configuration;
+- (void)notifyWhenPageDidChangeUsingBlock:(void (^)(NSInteger))block {
+    _pageChangedBlock = block;
 }
 
-- (void)notifyWhenImageViewDidTapUsingBlock:(void (^)(UIImageView * _Nonnull, NSUInteger))block {
-    _imageViewDidTapNotifyBlock = block;
+- (void)notifyWhenImageViewDidTapUsingBlock:(void (^)(UIImageView * _Nonnull, NSInteger))block {
+    _imageViewDidTapBlock = block;
 }
 
 @end

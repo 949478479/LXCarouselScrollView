@@ -34,20 +34,19 @@
 
     __weak typeof(self) weakSelf = self;
 
-    [self.scrollView configureImageViewAtIndex:^(UIImageView * _Nonnull imageView, NSUInteger index) {
+    [self.scrollView configureImageViewUsingBlock:^(UIImageView * _Nonnull imageView, NSInteger index) {
         imageView.image = weakSelf.images[index];
     }];
 
-    [self.scrollView configurePageControlForCurrentPage:^(NSUInteger currentPage) {
+    [self.scrollView notifyWhenPageDidChangeUsingBlock:^(NSInteger currentPage) {
         weakSelf.pageControl.currentPage = currentPage;
     }];
 
-    [self.scrollView notifyWhenImageViewDidTapUsingBlock:^(UIImageView * _Nonnull imageView, NSUInteger index) {
+    [self.scrollView notifyWhenImageViewDidTapUsingBlock:^(UIImageView * _Nonnull imageView, NSInteger index) {
         NSLog(@"%@, index:%@", imageView, @(index));
     }];
 
     [self.scrollView reloadData];
-
     [self.scrollView startTimer];
 }
 
@@ -86,7 +85,6 @@
     self.pageControl.numberOfPages = self.images.count;
 
     [self.scrollView reloadData];
-
     [self.scrollView startTimer];
 }
 
