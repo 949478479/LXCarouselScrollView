@@ -14,7 +14,48 @@ typedef NS_ENUM(NSUInteger, _LXPosition) {
     _LXPositionRight,
 };
 
-@interface LXCarouselScrollView () 
+@interface LXCarouselImageView ()
+@property (nonatomic) UIActivityIndicatorView *activityIndicator;
+@end
+
+@implementation LXCarouselImageView
+
+- (UIActivityIndicatorView *)activityIndicator
+{
+	if (!_activityIndicator) {
+		UIActivityIndicatorView *activityIndicator = [UIActivityIndicatorView new];
+		activityIndicator.translatesAutoresizingMaskIntoConstraints = NO;
+		[self addSubview:activityIndicator];
+		[self addConstraint:[NSLayoutConstraint constraintWithItem:activityIndicator
+														 attribute:NSLayoutAttributeCenterX
+														 relatedBy:NSLayoutRelationEqual
+															toItem:self
+														 attribute:NSLayoutAttributeCenterX
+														multiplier:1.0
+														  constant:0.0]];
+		[self addConstraint:[NSLayoutConstraint constraintWithItem:activityIndicator
+														 attribute:NSLayoutAttributeCenterY
+														 relatedBy:NSLayoutRelationEqual
+															toItem:self
+														 attribute:NSLayoutAttributeCenterY
+														multiplier:1.0
+														  constant:0.0]];
+		_activityIndicator = activityIndicator;
+	}
+	return _activityIndicator;
+}
+
+- (void)showActivityIndicator {
+	[self.activityIndicator startAnimating];
+}
+
+- (void)hideActivityIndicator {
+	[self.activityIndicator stopAnimating];
+}
+
+@end
+
+@interface LXCarouselScrollView ()
 {
     NSTimer *_timer;
     BOOL _enableTimer;
@@ -23,16 +64,16 @@ typedef NS_ENUM(NSUInteger, _LXPosition) {
     BOOL _isScrolling;
     BOOL _delayReload;
 
-    UIImageView *_leftImageView;
-    UIImageView *_rightImageView;
-    UIImageView *_centerImageView;
+    LXCarouselImageView *_leftImageView;
+    LXCarouselImageView *_rightImageView;
+    LXCarouselImageView *_centerImageView;
 
     UITapGestureRecognizer *_tapGestureRecognizer;
 
     NSInteger _indexes[3];
     void (^_pageChangedBlock)(NSInteger currentPage);
-    void (^_imageViewDidTapBlock)(UIImageView *imageView, NSInteger index);
-    void (^_imageViewConfigurationBlock)(UIImageView *imageView, NSInteger index);
+    void (^_imageViewDidTapBlock)(LXCarouselImageView *imageView, NSInteger index);
+    void (^_imageViewConfigurationBlock)(LXCarouselImageView *imageView, NSInteger index);
 }
 @end
 
@@ -72,9 +113,9 @@ typedef NS_ENUM(NSUInteger, _LXPosition) {
     [self addGestureRecognizer:_tapGestureRecognizer = tapGR];
 
     // 添加三个 imageView 作为子视图
-    UIImageView *__strong *imageViews[] = { &_leftImageView, &_centerImageView, &_rightImageView };
+    LXCarouselImageView *__strong *imageViews[] = { &_leftImageView, &_centerImageView, &_rightImageView };
     for (int i = 0; i < 3; ++i) {
-        UIImageView *imageView = [UIImageView new];
+        LXCarouselImageView *imageView = [LXCarouselImageView new];
 		imageView.clipsToBounds = YES;
 		imageView.contentMode = UIViewContentModeScaleAspectFill;
         imageView.translatesAutoresizingMaskIntoConstraints = NO;
@@ -113,7 +154,7 @@ typedef NS_ENUM(NSUInteger, _LXPosition) {
     return (scrollViewWidth != 0) && (scrollViewWidth * 3 == contentSizeWidth);
 }
 
-#pragma mark - 定时器相关
+#pragma mark - 定时器
 
 - (void)startTimer
 {
@@ -243,7 +284,7 @@ typedef NS_ENUM(NSUInteger, _LXPosition) {
 	[self _startTimerIfNeeded];
 }
 
-#pragma mark - <UIScrollViewDelegate>
+#pragma mark - UIScrollViewDelegate
 
 - (void)scrollViewWillBeginDragging:(UIScrollView *)scrollView {
 	[self _handleScrollViewWillBeginDragging];
@@ -421,9 +462,9 @@ typedef NS_ENUM(NSUInteger, _LXPosition) {
 	_indexes[_LXPositionCenter] = NSNotFound;
 }
 
-#pragma mark - 设置 block
+#pragma mark - block
 
-- (void)configureImageViewUsingBlock:(void (^)(UIImageView * _Nonnull, NSInteger))block {
+- (void)configureImageViewUsingBlock:(void (^)(LXCarouselImageView * _Nonnull, NSInteger))block {
     _imageViewConfigurationBlock = block;
 }
 
@@ -431,8 +472,24 @@ typedef NS_ENUM(NSUInteger, _LXPosition) {
     _pageChangedBlock = block;
 }
 
-- (void)notifyWhenImageViewDidTapUsingBlock:(void (^)(UIImageView * _Nonnull, NSInteger))block {
+- (void)notifyWhenImageViewDidTapUsingBlock:(void (^)(LXCarouselImageView * _Nonnull, NSInteger))block {
     _imageViewDidTapBlock = block;
+}
+
+#pragma mark - 活动指示器
+
+- (void)setActivityIndicatorViewColor:(UIColor *)color
+{
+	_leftImageView.activityIndicator.color = color;
+	_centerImageView.activityIndicator.color = color;
+	_rightImageView.activityIndicator.color = color;
+}
+
+- (void)setActivityIndicatorViewStyle:(UIActivityIndicatorViewStyle)style
+{
+	_leftImageView.activityIndicator.activityIndicatorViewStyle = style;
+	_centerImageView.activityIndicator.activityIndicatorViewStyle = style;
+	_rightImageView.activityIndicator.activityIndicatorViewStyle = style;
 }
 
 @end
